@@ -24,6 +24,9 @@ namespace GeoViewer.Core
 
         /// <summary>Vertical field of view in degrees; 50 mm standard lens unless the user changes it.</summary>
         public double FovYDeg = Optics.DefaultFovYDeg;
+
+        /// <summary>Equidistant fisheye projection (screen radius is proportional to the angle).</summary>
+        public bool Fisheye;
         public bool Orthographic = false;
         public double OrthoHalfHeight = 2.4;
 
@@ -48,7 +51,7 @@ namespace GeoViewer.Core
             _aspect = (double)Width / Height;
             _tanHalf = Math.Tan(FovYDeg * 0.5 * MathUtil.Deg2Rad);
 
-            double el = MathUtil.Clamp(ElevationDeg, -89.0, 89.0) * MathUtil.Deg2Rad;
+            double el = MathUtil.Clamp(ElevationDeg, -179.0, 179.0) * MathUtil.Deg2Rad;
             double az = AzimuthDeg * MathUtil.Deg2Rad;
 
             double ce = Math.Cos(el);
@@ -91,9 +94,30 @@ namespace GeoViewer.Core
             else
             {
                 origin = Eye;
-                dir = (Forward
-                       + Right * (ndcX * _tanHalf * _aspect)
-                       + Up * (ndcY * _tanHalf)).Normalized();
+
+                if (Fisheye)
+                {
+                    double half = FovYDeg * 0.5 * MathUtil.Deg2Rad;
+                    double dx = ndcX * _aspect;
+                    double dy = ndcY;
+                    double rr = Math.Sqrt(dx * dx + dy * dy);
+                    double theta = rr * half;
+                    if (rr < 1e-9)
+                    {
+                        dir = Forward;
+                    }
+                    else
+                    {
+                        V3 radial = (Right * (dx / rr) + Up * (dy / rr)).Normalized();
+                        dir = (Forward * Math.Cos(theta) + radial * Math.Sin(theta)).Normalized();
+                    }
+                }
+                else
+                {
+                    dir = (Forward
+                           + Right * (ndcX * _tanHalf * _aspect)
+                           + Up * (ndcY * _tanHalf)).Normalized();
+                }
             }
         }
 
@@ -114,6 +138,29 @@ namespace GeoViewer.Core
             }
 
             if (z <= 1e-6) { px = py = 0; return false; }
+
+            if (Fisheye)
+            {
+                double half = FovYDeg * 0.5 * MathUtil.Deg2Rad;
+                double len = v.Length;
+                double cos = MathUtil.Clamp(V3.Dot(v, Forward) / len, -1.0, 1.0);
+                double theta = Math.Acos(cos);
+                V3 radial = v - Forward * V3.Dot(v, Forward);
+                double rl = radial.Length;
+                double ux = 0.0, uy = 0.0;
+                if (rl > 1e-9)
+                {
+                    ux = V3.Dot(radial, Right) / rl;
+                    uy = V3.Dot(radial, Up) / rl;
+                }
+                double k = theta / Math.Max(1e-6, half);
+                double sx = ux * k;
+                double sy = uy * k;
+                px = (sx / Math.Max(1e-6, _aspect) + 1.0) * 0.5 * Width;
+                py = (1.0 - sy) * 0.5 * Height;
+                return true;
+            }
+
             double x = V3.Dot(v, Right) / (z * _tanHalf * _aspect);
             double y = V3.Dot(v, Up) / (z * _tanHalf);
             px = (x + 1.0) * 0.5 * Width;
@@ -154,7 +201,7 @@ namespace GeoViewer.Core
         public void Orbit(double dxPixels, double dyPixels)
         {
             AzimuthDeg -= dxPixels * 0.32;
-            ElevationDeg = MathUtil.Clamp(ElevationDeg + dyPixels * 0.32, -89.0, 89.0);
+            ElevationDeg = MathUtil.Clamp(ElevationDeg + dyPixels * 0.32, -179.0, 179.0);
             AzimuthDeg = WrapDegrees(AzimuthDeg);
         }
 
@@ -175,6 +222,7 @@ namespace GeoViewer.Core
                 ElevationDeg = ElevationDeg,
                 RollDeg = RollDeg,
                 FovYDeg = FovYDeg,
+                Fisheye = Fisheye,
                 Orthographic = Orthographic,
                 OrthoHalfHeight = OrthoHalfHeight,
                 Width = Width,

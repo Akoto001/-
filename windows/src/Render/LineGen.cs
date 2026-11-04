@@ -74,6 +74,52 @@ namespace GeoViewer.Render
                 }
                 if (scene.PerspectiveLines) AddPerspective(s, cam, segments);
             }
+
+            // the model may be spun in place: rotate its lines, never the ground or the perspective guides
+            double roll = scene.ModelRollDeg;
+            if (Math.Abs(roll) > 1e-9)
+            {
+                double lift = 0.0;
+                for (int i4 = 0; i4 < scene.Solids.Length; i4++) lift = Math.Max(lift, scene.Solids[i4].RollLift);
+                double r2 = roll * MathUtil.Deg2Rad;
+                V3 ax2 = scene.Solids[0].SpinAxis;
+                double c2 = Math.Cos(r2), s2 = Math.Sin(r2);
+                for (int i3 = 0; i3 < segments.Count; i3++)
+                {
+                    Segment g = segments[i3];
+                    if (g.Kind == LineKind.Perspective) continue;
+                    segments[i3] = new Segment(
+                        RotAxis(g.A, ax2, r2),
+                        RotAxis(g.B, ax2, r2),
+                        g.Kind, g.Scale);
+                }
+            }
+
+            double yaw = scene.ModelYawDeg;
+            if (Math.Abs(yaw) > 1e-9)
+            {
+                double rr = yaw * MathUtil.Deg2Rad;
+                double cc = Math.Cos(rr), ss = Math.Sin(rr);
+                for (int i2 = 0; i2 < segments.Count; i2++)
+                {
+                    Segment g = segments[i2];
+                    if (g.Kind == LineKind.Perspective) continue;
+                    segments[i2] = new Segment(
+                        new V3(g.A.X * cc + g.A.Z * ss, g.A.Y, -g.A.X * ss + g.A.Z * cc),
+                        new V3(g.B.X * cc + g.B.Z * ss, g.B.Y, -g.B.X * ss + g.B.Z * cc),
+                        g.Kind, g.Scale);
+                }
+            }
+        }
+
+        private static V3 RotAxis(in V3 p, in V3 axis, double radians)
+        {
+            double c = Math.Cos(radians), s = Math.Sin(radians);
+            if (Math.Abs(axis.X) < 1e-12 && Math.Abs(axis.Y) < 1e-12 && Math.Abs(axis.Z - 1.0) < 1e-12)
+                return new V3(p.X * c - p.Y * s, p.X * s + p.Y * c, p.Z);
+            double kd = V3.Dot(axis, p) * (1 - c);
+            V3 cr = V3.Cross(axis, p) * s;
+            return new V3(p.X * c + kd * axis.X + cr.X, p.Y * c + kd * axis.Y + cr.Y, p.Z * c + kd * axis.Z + cr.Z);
         }
 
         private static void AddMeshEdges(Solid s, List<Segment> list)

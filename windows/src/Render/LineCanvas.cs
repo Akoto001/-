@@ -62,13 +62,6 @@ namespace GeoViewer.Render
                     else { bx = cx; by = cy; bz = nz; db = cd; }
                 }
 
-                double sx0 = (ax / (az * tanX) + 1.0) * 0.5 * w;
-                double sy0 = (1.0 - ay / (az * tanY)) * 0.5 * h;
-                double sx1 = (bx / (bz * tanX) + 1.0) * 0.5 * w;
-                double sy1 = (1.0 - by / (bz * tanY)) * 0.5 * h;
-
-                if (double.IsNaN(sx0) || double.IsNaN(sy0) || double.IsNaN(sx1) || double.IsNaN(sy1)) continue;
-
                 // construction lines lie exactly on the surface they belong to, so the depth
                 // buffer rejects them; give them a small relative bias instead of dropping them
                 double bias = seg.Kind switch
@@ -79,32 +72,64 @@ namespace GeoViewer.Render
                     _ => 0.0
                 };
 
-                // perspective guides are construction lines in the axis colour; the floor never
-                // occludes them, only the solid body does (they go faint behind it)
-                if (seg.HasTint)
+                V3 color = seg.HasTint ? seg.Tint : st.Color;
+                if (seg.HasTint) bias = 0.02;
+                bool through = seg.Through;
+
+                if (through && pass == 0) continue;
+
+                // the fisheye projection bends straight lines, so split them before projecting
+                if (cam.Fisheye)
                 {
-                    DrawSegment(rgb, depth, w, h, ss,
-                                sx0, sy0, da, sx1, sy1, db,
-                                seg.Tint, alpha, hiddenAlpha, st.Width, wppPerDepth, epsPixels, 0.02, pass);
+                    const int steps = 20;
+                    double px0 = 0, py0 = 0, pd0 = 0;
+                    for (int k = 0; k <= steps; k++)
+                    {
+                        double t = (double)k / steps;
+                        double cx = ax + (bx - ax) * t;
+                        double cy = ay + (by - ay) * t;
+                        double czz = az + (bz - az) * t;
+                        double cd = da + (db - da) * t;
+                        FisheyePoint(cx, cy, czz, aspect, tanHalf, w, h, out double px, out double py);
+                        if (k > 0)
+                        {
+                            DrawSegment(rgb, depth, w, h, ss,
+                                        px0, py0, pd0, px, py, cd,
+                                        color, alpha, hiddenAlpha, st.Width, wppPerDepth, epsPixels, bias, pass, through);
+                        }
+                        px0 = px; py0 = py; pd0 = cd;
+                    }
                     continue;
                 }
 
-                // construction lines that run through the body (the sphere's axis and centre
-                // cross) are never occluded by the surface they pass behind
-                if (seg.Through && pass == 1)
-                {
-                    DrawSegment(rgb, depth, w, h, ss,
-                                sx0, sy0, da, sx1, sy1, db,
-                                st.Color, alpha, hiddenAlpha, st.Width, wppPerDepth, epsPixels, bias, 1, true);
-                    continue;
-                }
-                if (seg.Through) continue;
+                double sx0 = (ax / (az * tanX) + 1.0) * 0.5 * w;
+                double sy0 = (1.0 - ay / (az * tanY)) * 0.5 * h;
+                double sx1 = (bx / (bz * tanX) + 1.0) * 0.5 * w;
+                double sy1 = (1.0 - by / (bz * tanY)) * 0.5 * h;
+
+                if (double.IsNaN(sx0) || double.IsNaN(sy0) || double.IsNaN(sx1) || double.IsNaN(sy1)) continue;
 
                 DrawSegment(rgb, depth, w, h, ss,
                             sx0, sy0, da, sx1, sy1, db,
-                            st.Color, alpha, hiddenAlpha, st.Width, wppPerDepth, epsPixels, bias, pass);
+                            color, alpha, hiddenAlpha, st.Width, wppPerDepth, epsPixels, bias, pass, through);
             }
             }
+        }
+
+        /// <summary>Camera-space point to pixel, matching Camera's equidistant fisheye mapping.</summary>
+        private static void FisheyePoint(double x, double y, double z, double aspect, double tanHalf,
+                                         int w, int h, out double px, out double py)
+        {
+            double half = Math.Atan(tanHalf);
+            double len = Math.Sqrt(x * x + y * y + z * z);
+            double cos = len > 1e-9 ? z / len : 1.0;
+            double theta = Math.Acos(Math.Clamp(cos, -1.0, 1.0));
+            double rl = Math.Sqrt(x * x + y * y);
+            double ux = 0.0, uy = 0.0;
+            if (rl > 1e-9) { ux = x / rl; uy = y / rl; }
+            double k = theta / Math.Max(1e-6, half);
+            px = (ux * k / Math.Max(1e-6, aspect) + 1.0) * 0.5 * w;
+            py = (1.0 - uy * k) * 0.5 * h;
         }
 
         private static void DrawSegment(float[] rgb, float[] depth, int w, int h, int ss,

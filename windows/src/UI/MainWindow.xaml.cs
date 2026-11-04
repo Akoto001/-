@@ -18,6 +18,7 @@ namespace GeoViewer.UI
 
             BuildAngleCombos();
             BuildFovCombo();
+
             AttachRowDrop(PitchCombo);
             AttachRowDrop(YawCombo);
             AttachRowDrop(RollCombo);
@@ -52,9 +53,11 @@ namespace GeoViewer.UI
             PitchCombo.Items.Add(FreeAngle);
             YawCombo.Items.Add(FreeAngle);
             RollCombo.Items.Add(FreeAngle);
-            for (int v = -90; v <= 90; v += 15) PitchCombo.Items.Add(v);
+            for (int v = -180; v <= 180; v += 15) PitchCombo.Items.Add(v);
             for (int v = -180; v <= 180; v += 15) YawCombo.Items.Add(v);
-            for (int v = -90; v <= 90; v += 15) RollCombo.Items.Add(v);
+            for (int v = -180; v <= 180; v += 15) RollCombo.Items.Add(v);
+            SpinCombo.Items.Add(FreeAngle);
+            for (int v = -180; v <= 180; v += 15) SpinCombo.Items.Add(v);
         }
 
         /// <summary>One entry of the focal length drop down (35 mm equivalent).</summary>
@@ -97,6 +100,8 @@ namespace GeoViewer.UI
                 _scene.Mode = cli.Mode;
                 _scene.StructureLines = cli.Lines;
                 _scene.PerspectiveLines = cli.Persp;
+            if (cli.ModelRoll.HasValue) _scene.SetModelRoll(cli.ModelRoll.Value);
+            if (cli.Sweep.HasValue) _scene.SetLensSweep(cli.Sweep.Value);
                 _scene.Select(cli.SelectedSolidIndex);
                 if (cli.Edge.HasValue) _scene.SetEdgeLength(cli.Edge.Value);
 
@@ -111,6 +116,8 @@ namespace GeoViewer.UI
             {
                 _sync = false;
             }
+
+            if (!string.IsNullOrWhiteSpace(cli.Lens)) _scene.SetLens(Lens.Parse(cli.Lens, _scene.LensMode));
 
             if (cli.Azimuth.HasValue || cli.Elevation.HasValue || cli.Roll.HasValue)
                 _scene.ApplyAxisAngles(cli.Elevation ?? _scene.CurrentPitch,
@@ -193,6 +200,8 @@ namespace GeoViewer.UI
                 YawValue.Text = "Y " + Fmt(_scene.CurrentYaw);
                 RollValue.Text = "Z " + Fmt(_scene.CurrentRoll);
                 SyncFovUi();
+            SyncSpinUi();
+                SyncLensUi();
             }
             finally
             {
@@ -243,12 +252,68 @@ namespace GeoViewer.UI
             SyncAngleUi();
         }
 
+        private void OnLensRotateClick(object sender, RoutedEventArgs e)
+        {
+            _scene.SetLensRotate(!_scene.LensRotate);
+            SyncLensUi();
+            Viewport.RequestRender(true);
+        }
+        private void OnLensClick(object sender, RoutedEventArgs e)
+        {
+            if (_sync) return;
+            int index = 0;
+            if (sender is FrameworkElement fe && fe.Tag != null) int.TryParse(fe.Tag.ToString(), out index);
+            _scene.SetLens((LensKind)Math.Clamp(index, 0, Lens.Count - 1));
+            Refresh(refit: true);
+        }
+
+        /// <summary>Locks the axis rows that the active perspective convention pins.</summary>
+        private void ApplyLensLocks()
+        {
+            LensKind kind = _scene.LensMode;
+            bool prescribed = Lens.IsPrescribed(kind);
+            bool canRotate = Lens.RotatableAxis(kind) != 0;
+            LensRotateButton.Visibility = canRotate ? Visibility.Visible : Visibility.Collapsed;
+            LensRotateButton.Content = _scene.LensRotate ? "旋转：开" : "旋转：关";
+            int rotAxis = Lens.RotatableAxis(kind);
+            bool rot = _scene.LensRotate;
+            PitchRow.IsEnabled = (!prescribed && !Lens.LocksElevation(kind)) || (rot && rotAxis == 2);
+            YawRow.IsEnabled = (!prescribed && !Lens.LocksAzimuth(kind)) || (rot && rotAxis == 1);
+            RollRow.IsEnabled = prescribed ? true : !Lens.LocksRoll(kind);
+            // the focal length stays adjustable: it scales where the vanishing points sit,
+            // while their directions (the perspective structure) are what the mode pins.
+            FovRow.IsEnabled = true;
+            FovRow.Opacity = 1.0;
+            PitchRow.Opacity = PitchRow.IsEnabled ? 1.0 : 0.42;
+            YawRow.Opacity = YawRow.IsEnabled ? 1.0 : 0.42;
+            RollRow.Opacity = RollRow.IsEnabled ? 1.0 : 0.42;
+        }
+
+        private void SyncLensUi()
+        {
+            LensKind kind = _scene.LensMode;
+            Button[] buttons = { LensFree, LensOne, LensTwo, LensThree, LensFish };
+            string[] names = { "自由", "一点", "两点", "三点", "鱼眼" };
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                bool on = (int)kind == i;
+                buttons[i].Content = on ? "●" + names[i] : names[i];
+                buttons[i].FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
+            }
+            ApplyLensLocks();
+            PitchValue.Text = "X " + Fmt(_scene.CurrentPitch) + (PitchRow.IsEnabled ? "" : " 锁");
+            YawValue.Text = "Y " + Fmt(_scene.CurrentYaw) + (YawRow.IsEnabled ? "" : " 锁");
+            RollValue.Text = "Z " + Fmt(GeoViewer.Core.Lens.IsPrescribed(_scene.LensMode) ? _scene.Camera.RollDeg : _scene.CurrentRoll) + (RollRow.IsEnabled ? "" : " 锁");
+            if (Lens.IsPrescribed(_scene.LensMode))
+                StatusText.Text = _scene.Mode switch { ShadingMode.Translucent => "半透明", ShadingMode.Outline => "透明", _ => "不透明" }
+                    + " · 结构线 " + (_scene.StructureLines ? "开" : "关") + " · 灭点已固定：" + Lens.ShortName(_scene.LensMode);
+        }
         private void ApplyAngles()
         {
             if (_sync || _scene == null) return;
             double pitch = SelectedValue(PitchCombo, _scene.CurrentPitch);
             double yaw = SelectedValue(YawCombo, _scene.CurrentYaw);
-            double roll = SelectedValue(RollCombo, _scene.CurrentRoll);
+            double roll = SelectedValue(RollCombo, GeoViewer.Core.Lens.IsPrescribed(_scene.LensMode) ? _scene.Camera.RollDeg : _scene.CurrentRoll);
             _scene.ApplyAxisAngles(pitch, yaw, roll);
             Refresh(refit: true);
         }
@@ -272,7 +337,7 @@ namespace GeoViewer.UI
         private void StepPitch(int dir)
         {
             if (_scene == null) return;
-            _scene.ApplyAxisAngles(Snap(_scene.CurrentPitch, dir, -90, 90), _scene.CurrentYaw, _scene.CurrentRoll);
+            _scene.ApplyAxisAngles(Snap(_scene.CurrentPitch, dir, -180, 180), _scene.CurrentYaw, _scene.CurrentRoll);
             FinishAngleStep();
         }
 
@@ -286,7 +351,7 @@ namespace GeoViewer.UI
         private void StepRoll(int dir)
         {
             if (_scene == null) return;
-            _scene.ApplyAxisAngles(_scene.CurrentPitch, _scene.CurrentYaw, Snap(_scene.CurrentRoll, dir, -90, 90));
+            _scene.ApplyAxisAngles(_scene.CurrentPitch, _scene.CurrentYaw, Snap(_scene.CurrentRoll, dir, -180, 180));
             FinishAngleStep();
         }
 
@@ -306,6 +371,35 @@ namespace GeoViewer.UI
 
         // ---- field of view / focal length ----
 
+        private void OnSpinChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_sync) return;
+            if (!(SpinCombo.SelectedItem is int v)) return;
+            _scene.SetLensSweep(v);
+            SpinValue.Text = Fmt(_scene.Camera.RollDeg);
+            Viewport.RequestRender(true);
+            TopView.Refresh();
+        }
+
+        private void OnSpinMinus(object sender, RoutedEventArgs e) => StepSpin(-1);
+        private void OnSpinPlus(object sender, RoutedEventArgs e) => StepSpin(1);
+
+        private void StepSpin(int dir)
+        {
+            double next = Snap(_scene.Camera.RollDeg, dir, -180.0, 180.0);
+            _scene.SetLensSweep(next);
+            SyncAngleUi();
+            TopView.Refresh();
+            Viewport.RequestRender(true);
+        }
+
+        private void SyncSpinUi()
+        {
+            _sync = true;
+            SelectNearest(SpinCombo, _scene.Camera.RollDeg);
+            _sync = false;
+            SpinValue.Text = Fmt(_scene.Camera.RollDeg);
+        }
         private void OnFovChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_sync || _scene == null) return;
@@ -328,6 +422,7 @@ namespace GeoViewer.UI
             idx = Math.Clamp(idx + dir, 0, Optics.PresetFocalMm.Length - 1);
             _scene.SetFocalMm(Optics.PresetFocalMm[idx]);
             SyncFovUi();
+            SyncSpinUi();
             Refresh(refit: true);
         }
 

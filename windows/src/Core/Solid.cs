@@ -96,8 +96,49 @@ namespace GeoViewer.Core
         /// <summary>Height of the raw mesh emitted by <see cref="AsaroHead.Build"/> (plinth included).</summary>
         public const double AsaroSourceHeight = AsaroHead.SourceHeight;
 
-        public void UpdateBounds()
+        /// <summary>Spin of the object around the world vertical axis (degrees). The camera never moves.</summary>
+        public double YawDeg;
+
+        public double RollDeg;
+
+        /// <summary>Lift applied after the Z roll so the tilted model rests on the floor instead of sinking into it.</summary>
+        public double RollLift;
+
+        /// <summary>Axis the model spins about (world space). Defaults to Z, which is the plain roll.</summary>
+        public V3 SpinAxis = new V3(0, 0, 1);
+
+        private static V3 Spin(in V3 p, double degrees)
         {
+            if (Math.Abs(degrees) < 1e-9) return p;
+            double r = degrees * MathUtil.Deg2Rad;
+            double c = Math.Cos(r), s = Math.Sin(r);
+            return new V3(p.X * c + p.Z * s, p.Y, -p.X * s + p.Z * c);
+        }
+
+        /// <summary>Roll about the world Z axis: tips the model sideways, pivoting on the origin.</summary>
+        private static V3 Roll(in V3 p, double degrees)
+        {
+            if (Math.Abs(degrees) < 1e-9) return p;
+            double r = degrees * MathUtil.Deg2Rad;
+            double c = Math.Cos(r), s = Math.Sin(r);
+            return new V3(p.X * c - p.Y * s, p.X * s + p.Y * c, p.Z);
+        }
+
+        /// <summary>Rotation about an arbitrary axis through the origin (Rodrigues).</summary>
+        private V3 RollAbout(in V3 p, double degrees)
+        {
+            if (Math.Abs(degrees) < 1e-9) return p;
+            V3 k = SpinAxis;
+            if (Math.Abs(k.X) < 1e-12 && Math.Abs(k.Y) < 1e-12 && Math.Abs(k.Z - 1.0) < 1e-12) return Roll(p, degrees);
+            double r = degrees * MathUtil.Deg2Rad;
+            double c = Math.Cos(r), s = Math.Sin(r);
+            double kd = V3.Dot(k, p) * (1 - c);
+            V3 cr = V3.Cross(k, p) * s;
+            return new V3(p.X * c + kd * k.X + cr.X, p.Y * c + kd * k.Y + cr.Y, p.Z * c + kd * k.Z + cr.Z);
+        }
+
+        public void UpdateBounds()
+            {
             if (Mesh != null)
             {
                 Min = Mesh.Min;
@@ -121,6 +162,30 @@ namespace GeoViewer.Core
         /// increasing distance. Normals point outwards (they may face away from the viewer).
         /// </summary>
         public int Intersect(in V3 o, in V3 d, Span<double> ts, Span<V3> ns)
+        {
+            bool yaw = Math.Abs(YawDeg) > 1e-9;
+            bool roll = Math.Abs(RollDeg) > 1e-9;
+            if (!yaw && !roll) return IntersectLocal(o, d, ts, ns);
+
+            V3 ro = o, rd = d;
+            if (roll)
+            {
+                ro = RollAbout(new V3(ro.X, ro.Y - RollLift, ro.Z), -RollDeg);
+                rd = RollAbout(rd, -RollDeg);
+            }
+            if (yaw) { ro = Spin(ro, -YawDeg); rd = Spin(rd, -YawDeg); }
+            int hits = IntersectLocal(ro, rd, ts, ns);
+            for (int k = 0; k < hits; k++)
+            {
+                V3 n = ns[k];
+                if (yaw) n = Spin(n, YawDeg);
+                if (roll) n = RollAbout(n, RollDeg);
+                ns[k] = n;
+            }
+            return hits;
+        }
+
+        private int IntersectLocal(in V3 o, in V3 d, Span<double> ts, Span<V3> ns)
         {
             if (Mesh != null) return Mesh.Intersect(o, d, ts, ns);
             switch (Kind)
@@ -354,6 +419,14 @@ namespace GeoViewer.Core
 
         /// <summary>True when the point is inside the solid (used for structural line styling).</summary>
         public bool Contains(in V3 p)
+        {
+            V3 q = p;
+            if (Math.Abs(RollDeg) > 1e-9) q = RollAbout(new V3(q.X, q.Y - RollLift, q.Z), -RollDeg);
+            if (Math.Abs(YawDeg) > 1e-9) q = Spin(q, -YawDeg);
+            return ContainsLocal(q);
+        }
+
+        private bool ContainsLocal(in V3 p)
         {
             if (Mesh != null) return Mesh.Contains(p);
             switch (Kind)

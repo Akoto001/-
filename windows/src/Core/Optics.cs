@@ -14,7 +14,10 @@ namespace GeoViewer.Core
 
         /// <summary>Widest / narrowest field of view the tool allows (about 14 mm ... 200 mm).</summary>
         public const double MinFovYDeg = 6.8;
-        public const double MaxFovYDeg = 82.0;
+        public const double MaxFovYDeg = 110.0;
+
+        /// <summary>Fisheye can open up to a full 180° diagonal-of-frame angle.</summary>
+        public const double MaxFisheyeFovYDeg = 180.0;
 
         /// <summary>Standard lens: 50 mm, vertical field of view 27 degrees.</summary>
         public const double DefaultFocalMm = 50.0;

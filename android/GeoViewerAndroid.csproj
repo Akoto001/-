@@ -19,15 +19,19 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(ProbeMode)'=='viewport'">
+    <DefineConstants>$(DefineConstants);PROBE_VIEWPORT</DefineConstants>
+  </PropertyGroup>
 
   <PropertyGroup>
   </PropertyGroup>
 
   <!-- Reuse the portable core and software renderer of the desktop build, unchanged. -->
   <ItemGroup>
-    <Compile Include="..\windows\src\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
-    <Compile Include="..\windows\src\Render\*.cs" Link="Render\%(Filename)%(Extension)" />
+    <Compile Include="..\GeometryViewer-Project\src\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\GeometryViewer-Project\src\Render\*.cs" Link="Render\%(Filename)%(Extension)" />
     <Compile Include="MainActivity.cs" />
+    <Compile Include="MotionView.cs" />
     <!-- ViewportView.cs is intentionally NOT compiled: the custom View subclass is a crash suspect
          on Android 16, the picture is drawn into an ImageView bitmap instead. -->
     <None Include="ViewportView.cs" />

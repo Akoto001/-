@@ -208,7 +208,7 @@ namespace GeoViewer.UI
 
             // The camera measures in device pixels (it is told the rendered size), the mouse in DIUs.
             double dpi = Dpi;
-            if (_orbiting) _scene.Camera.Orbit(dx, dy);
+            if (_orbiting) _scene.TryOrbit(dx, dy);
             else _scene.Camera.PanPixels(dx * dpi, dy * dpi);
             _scene.Camera.Update();
 

@@ -236,7 +236,8 @@ namespace GeoViewer.Render
         private readonly Camera _cam;
         private readonly int _w, _h;
         private readonly V3 _eye, _fwd, _right, _up;
-        private readonly double _tanHalf, _aspect;
+        private readonly double _tanHalf, _aspect, _halfAngle;
+        private readonly bool _fisheye;
         private readonly bool _groundVisible;
         /// <summary>Snapshot of the visible solids; iterating a yield-iterator per pixel allocates.</summary>
         private readonly Solid[] _solids;
@@ -254,8 +255,10 @@ namespace GeoViewer.Render
             _fwd = cam.Forward;
             _right = cam.Right;
             _up = cam.Up;
-            _tanHalf = Math.Tan(cam.FovYDeg * 0.5 * MathUtil.Deg2Rad);
+            _halfAngle = cam.FovYDeg * 0.5 * MathUtil.Deg2Rad;
+            _tanHalf = Math.Tan(_halfAngle);
             _aspect = (double)w / h;
+            _fisheye = cam.Fisheye;
             _groundVisible = _eye.Y > 0.02 * scene.EdgeLength;
         }
 
@@ -264,6 +267,25 @@ namespace GeoViewer.Render
             double ndcX = 2.0 * (px + 0.5) / _w - 1.0;
             double ndcY = 1.0 - 2.0 * (py + 0.5) / _h;
             origin = _eye;
+
+            if (_fisheye)
+            {
+                double dx = ndcX * _aspect;
+                double dy = ndcY;
+                double rr = Math.Sqrt(dx * dx + dy * dy);
+                double theta = rr * _halfAngle;
+                if (rr < 1e-9)
+                {
+                    dir = _fwd;
+                }
+                else
+                {
+                    V3 radial = (_right * (dx / rr) + _up * (dy / rr)).Normalized();
+                    dir = (_fwd * Math.Cos(theta) + radial * Math.Sin(theta)).Normalized();
+                }
+                return;
+            }
+
             dir = (_fwd + _right * (ndcX * _tanHalf * _aspect) + _up * (ndcY * _tanHalf)).Normalized();
         }
 

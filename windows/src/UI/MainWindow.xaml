@@ -60,7 +60,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="76"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="X 俯仰" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="X" Style="{StaticResource FieldLabel}"/>
                                 <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnPitchMinus"/>
                                 <ComboBox x:Name="PitchCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnPitchChanged"/>
                                 <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnPitchPlus"/>
@@ -76,7 +76,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="76"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Y 方位" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="Y" Style="{StaticResource FieldLabel}"/>
                                 <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnYawMinus"/>
                                 <ComboBox x:Name="YawCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnYawChanged"/>
                                 <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnYawPlus"/>
@@ -92,7 +92,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="76"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Z 滚转" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="Z" Style="{StaticResource FieldLabel}"/>
                                 <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnRollMinus"/>
                                 <ComboBox x:Name="RollCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnRollChanged"/>
                                 <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnRollPlus"/>
@@ -100,6 +100,21 @@
                                            HorizontalAlignment="Right"/>
                             </Grid>
 
+                            <Grid x:Name="SpinRow" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="52"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="76"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="滚动" Style="{StaticResource FieldLabel}"/>
+                                <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnSpinMinus"/>
+                                <ComboBox x:Name="SpinCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnSpinChanged"/>
+                                <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnSpinPlus"/>
+                                <TextBlock x:Name="SpinValue" Grid.Column="4" Style="{StaticResource HintText}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
                             <Grid x:Name="FovRow" Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="52"/>
@@ -116,6 +131,15 @@
                                            HorizontalAlignment="Right"/>
                             </Grid>
 
+                            <TextBlock Text="透视" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+                            <UniformGrid x:Name="LensGrid" Columns="5" Margin="0,0,0,10">
+                                <Button x:Name="LensFree" Content="自由" Tag="0" Margin="0,0,4,0" Padding="0,3" FontSize="11" Click="OnLensClick"/>
+                                <Button x:Name="LensOne" Content="一点" Tag="1" Margin="0,0,4,0" Padding="0,3" FontSize="11" Click="OnLensClick"/>
+                                <Button x:Name="LensTwo" Content="两点" Tag="2" Margin="0,0,4,0" Padding="0,3" FontSize="11" Click="OnLensClick"/>
+                                <Button x:Name="LensThree" Content="三点" Tag="3" Margin="0,0,4,0" Padding="0,3" FontSize="11" Click="OnLensClick"/>
+                                <Button x:Name="LensFish" Content="鱼眼" Tag="4" Padding="0,3" FontSize="11" Click="OnLensClick"/>
+                            </UniformGrid>
+                            <Button x:Name="LensRotateButton" Content="旋转：关" Margin="0,6,0,0" Click="OnLensRotateClick"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -182,7 +206,7 @@
                         <StackPanel>
                             <TextBlock Text="尺寸关系" Style="{StaticResource SectionHeader}"/>
                             <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" LineHeight="16"
-                                       Text="a＝棱长。球径 √2a；其余底径 a、高 2a。六体同位同尺度。"/>
+                                       Text="a＝棱长。球径 √2a；其余底径 a、高 2a。五体同位同尺度。"/>
                         </StackPanel>
                     </Border>
 

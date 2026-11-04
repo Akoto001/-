@@ -23,6 +23,13 @@ namespace GeoViewer
         public double? Elevation;
         public double? Roll;
         public double? FovYDeg;
+        public string Lens;
+        public double? ModelYaw;
+
+        public double? ModelRoll;
+
+        public double? Sweep;
+        public bool LensRotate;
         public double? FocalMm;
         public double? Distance;
         public bool NoFit;
@@ -63,6 +70,13 @@ namespace GeoViewer
                     case "--roll": o.Roll = Dbl(Next()); break;
                     case "--fov": o.FovYDeg = Dbl(Next()); break;
                     case "--mm": o.FocalMm = Dbl(Next()); break;
+            case "--myaw": o.ModelYaw = Dbl(Next()); break;
+
+            case "--mroll": o.ModelRoll = Dbl(Next()); break;
+
+            case "--sweep": o.Sweep = Dbl(Next()); break;
+            case "--lens": o.Lens = Next(); break;
+                    case "--rot": o.LensRotate = Int(Next(), 1) != 0; break;
                     case "--dist": o.Distance = Dbl(Next()); break;
                     case "--edge": o.Edge = Dbl(Next()); break;
                     case "--nofit": o.NoFit = true; break;
@@ -101,6 +115,11 @@ namespace GeoViewer
 
         public void Apply(Scene scene)
         {
+            if (!string.IsNullOrWhiteSpace(Lens)) scene.SetLens(GeoViewer.Core.Lens.Parse(Lens, scene.LensMode));
+            if (ModelYaw.HasValue) scene.SetModelYaw(ModelYaw.Value);
+            if (ModelRoll.HasValue) scene.SetModelRoll(ModelRoll.Value);
+            if (Sweep.HasValue) scene.SetLensSweep(Sweep.Value);
+            if (LensRotate) scene.SetLensRotate(true);
             scene.Mode = Mode;
             scene.StructureLines = Lines;
         scene.PerspectiveLines = Persp;
@@ -110,7 +129,7 @@ namespace GeoViewer
             // same semantics as the GUI: --az/--el/--roll are offsets from the initial pose
             if (Azimuth.HasValue || Elevation.HasValue || Roll.HasValue)
                 scene.ApplyAxisAngles(Elevation ?? 0.0, Azimuth ?? 0.0, Roll ?? 0.0);
-            else
+            else if (!GeoViewer.Core.Lens.IsPrescribed(scene.LensMode))
             {
                 // no angles given: start from the same pose the window opens with
                 scene.Camera.AzimuthDeg = Scene.InitialAzimuth;
@@ -127,6 +146,9 @@ namespace GeoViewer
         public RenderResult Render(Scene scene)
         {
             if (!NoFit) scene.Fit(Width, Height);
+            // Fit may touch the camera pose; re-apply the requested angles so roll survives
+            if (Azimuth.HasValue || Elevation.HasValue || Roll.HasValue)
+                scene.ApplyAxisAngles(Elevation ?? 0.0, Azimuth ?? 0.0, Roll ?? 0.0);
             if (Distance.HasValue)
             {
                 scene.Camera.Distance = Distance.Value;

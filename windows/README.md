@@ -76,6 +76,7 @@ src\
 | 穿过实体的构造线（球心十字/极轴不隐藏） | `Segment.Through`；`LineCanvas.DrawSegment(...)` 的 `through` 参数（深度测试直接放行） |
 | 换角度后自动取景、物体始终入画 | `src\Core\Scene.cs` 的 `Fit(width, height, margin)`：环绕中心固定为五体并集包围盒中心，按 8 个角点解出所需距离（`margin` 默认 1.16 是留边） |
 | 透视线的画法与颜色 | `LineGen.cs` 的 `AddPerspective(...)`/`AddBoxPerspective(...)`/`AddVerticalPerspective(...)`；消失点标记在 `LineCanvas.cs` 的 `DrawVanishingPoints(...)` |
+| 透视类型（一点/两点/三点/鱼眼）、锁定的朝向与默认焦距 | `src\Core\Lens.cs` 的 `LensKind` / `PresetOrientation(...)` / `IsPrescribed(...)`；鱼眼投影在 `Camera.RayFor` 与 `Camera.Project` |
 | 侧栏布局与文案 | `src\UI\MainWindow.xaml` |
 | 默认窗口大小 | `src\UI\MainWindow.xaml.cs` 构造函数 |
 
