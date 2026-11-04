@@ -1,0 +1,193 @@
+<Window x:Class="GeoViewer.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:GeoViewer.UI"
+        Title="几何体参考 · 3D"
+        Height="912" Width="1340" MinHeight="620" MinWidth="980"
+        Background="{StaticResource WindowBg}" Foreground="{StaticResource TextBrush}"
+        FontFamily="Microsoft YaHei UI" FontSize="12"
+        WindowStartupLocation="CenterScreen"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="342"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ===== 3D viewport ===== -->
+        <Grid Grid.Column="0" ClipToBounds="True">
+            <ui:ViewportControl x:Name="Viewport"/>
+
+            <Border VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="14"
+                    Background="#B514161B" CornerRadius="4" Padding="10,6"
+                    IsHitTestVisible="False">
+                <TextBlock x:Name="HintBar" FontSize="11" Foreground="{StaticResource TextDim}"
+                           Text="左键拖拽 旋转　·　中键/右键拖拽 平移　·　滚轮 缩放　·　双击 重置"/>
+            </Border>
+
+            <TextBlock x:Name="StatusText" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16,14"
+                       FontSize="11" Foreground="{StaticResource TextFaint}" IsHitTestVisible="False"/>
+        </Grid>
+
+        <!-- ===== sidebar ===== -->
+        <Border Grid.Column="1" Background="{StaticResource PanelBg}"
+                BorderBrush="{StaticResource PanelBorder}" BorderThickness="1,0,0,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Padding="14,14,10,14">
+                <StackPanel>
+
+                    <!-- ===== top view ===== -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="俯视图" Style="{StaticResource SectionHeader}"/>
+                            <ui:TopViewControl x:Name="TopView" Height="118"/>
+                            <TextBlock Text="青色点＝摄像机　橙色点＝视线中心　射线＝水平视野"
+                                       Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== camera angles ===== -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="摄像机角度" Style="{StaticResource SectionHeader}"/>
+
+                            <Grid x:Name="PitchRow" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="52"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="76"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="X 俯仰" Style="{StaticResource FieldLabel}"/>
+                                <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnPitchMinus"/>
+                                <ComboBox x:Name="PitchCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnPitchChanged"/>
+                                <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnPitchPlus"/>
+                                <TextBlock x:Name="PitchValue" Grid.Column="4" Style="{StaticResource HintText}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid x:Name="YawRow" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="52"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="76"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Y 方位" Style="{StaticResource FieldLabel}"/>
+                                <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnYawMinus"/>
+                                <ComboBox x:Name="YawCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnYawChanged"/>
+                                <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnYawPlus"/>
+                                <TextBlock x:Name="YawValue" Grid.Column="4" Style="{StaticResource HintText}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid x:Name="RollRow" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="52"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="76"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Z 滚转" Style="{StaticResource FieldLabel}"/>
+                                <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnRollMinus"/>
+                                <ComboBox x:Name="RollCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnRollChanged"/>
+                                <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnRollPlus"/>
+                                <TextBlock x:Name="RollValue" Grid.Column="4" Style="{StaticResource HintText}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid x:Name="FovRow" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="52"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="76"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="焦距" Style="{StaticResource FieldLabel}"/>
+                                <Button Grid.Column="1" Content="−" Style="{StaticResource StepButton}" Click="OnFovMinus"/>
+                                <ComboBox x:Name="FovCombo" Grid.Column="2" Margin="3,0" SelectionChanged="OnFovChanged"/>
+                                <Button Grid.Column="3" Content="+" Style="{StaticResource StepButton}" Click="OnFovPlus"/>
+                                <TextBlock x:Name="FovValue" Grid.Column="4" Style="{StaticResource HintText}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Content="适配窗口" Margin="0,0,5,0" Click="OnFitClick"/>
+                                <Button Grid.Column="1" Content="重置视角" Margin="5,0,0,0" Click="OnResetClick"/>
+                            </Grid>
+
+                            <Button x:Name="TopmostToggle" Content="窗口置顶：关" Margin="0,8,0,0" Click="OnTopmostClick"/>
+
+                            <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                       Text="角度＝相对初始视角的偏移；焦距越短视野越广。"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== appearance ===== -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="建模样貌" Style="{StaticResource SectionHeader}"/>
+                            <RadioButton x:Name="ModeOpaque" Content="不透明" GroupName="Shade"
+                                         Tag="0" IsChecked="True" Margin="0,0,0,7" Checked="OnModeChecked"/>
+                            <RadioButton x:Name="ModeTranslucent" Content="半透明" GroupName="Shade"
+                                         Tag="1" Margin="0,0,0,7" Checked="OnModeChecked"/>
+                            <RadioButton x:Name="ModeOutline" Content="透明（仅轮廓线）" GroupName="Shade"
+                                         Tag="2" Margin="0,0,0,10" Checked="OnModeChecked"/>
+                            <CheckBox x:Name="StructCheck" Content="显示结构线" IsChecked="True"
+                                      Checked="OnStructToggled" Unchecked="OnStructToggled"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== model selector ===== -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="当前模型" Style="{StaticResource SectionHeader}"/>
+                            <UniformGrid Columns="2">
+                                <RadioButton x:Name="ModelSphere" Content="球体" GroupName="Model" Tag="0"
+                                             Margin="0,0,0,9" Checked="OnModelChecked"/>
+                                <RadioButton x:Name="ModelCylinder" Content="圆柱体" GroupName="Model" Tag="1"
+                                             Margin="0,0,0,9" Checked="OnModelChecked"/>
+                                <RadioButton x:Name="ModelCube" Content="正方体" GroupName="Model" Tag="2"
+                                             IsChecked="True" Margin="0,0,0,9" Checked="OnModelChecked"/>
+                                <RadioButton x:Name="ModelCuboid" Content="长方体" GroupName="Model" Tag="3"
+                                             Margin="0,0,0,9" Checked="OnModelChecked"/>
+                                <RadioButton x:Name="ModelCone" Content="圆锥体" GroupName="Model" Tag="4"
+                                             Margin="0,0,0,9" Checked="OnModelChecked"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== perspective guides ===== -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="透视线" Style="{StaticResource SectionHeader}"/>
+                            <CheckBox x:Name="PerspCheck" Content="显示消失点连线"
+                                      Checked="OnPerspToggled" Unchecked="OnPerspToggled"/>
+                            <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Text="红／绿／蓝＝X／Y／Z 轴，消失点会标小圈。"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== note ===== -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="尺寸关系" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" LineHeight="16"
+                                       Text="a＝棱长。球径 √2a；其余底径 a、高 2a。六体同位同尺度。"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

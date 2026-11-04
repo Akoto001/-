@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GeoViewer</RootNamespace>
+    <AssemblyName>GeometryViewer</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>1.7.3</Version>
+    <FileVersion>1.7.3.0</FileVersion>
+    <Product>几何体检视器</Product>
+    <AssemblyTitle>几何体检视器 · 绘画参考</AssemblyTitle>
+    <Description>用于绘画参考的 3D 几何体检视器（球体／圆柱体／正方体／长方体／圆锥体）</Description>
+    <Company>Akoto</Company>
+    <Copyright>© 2026 Akoto</Copyright>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
+
+</Project>

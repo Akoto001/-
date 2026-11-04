@@ -1,0 +1,31 @@
+# 编译产物
+[Bb]in/
+[Oo]bj/
+dist/
+publish/
+*.user
+*.suo
+.vs/
+
+# 本机构建缓存（各自的工作目录，勿提交）
+.build/
+.dotnet8/
+.dotnet8-home/
+.dotenethome/
+.android-sdk/
+.android-home/
+.gradle-home/
+.nuget/
+*.zip
+
+# 签名与密钥：绝对不要提交
+secrets/
+*.keystore
+*.jks
+*.pfx
+debug.keystore
+
+# 系统
+Thumbs.db
+desktop.ini
+.DS_Store
