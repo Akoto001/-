@@ -96,11 +96,6 @@ GeometryViewer.exe --shot out.png --w 1200 --h 800 --ss 2 --solid cube --mode ou
 | `--struct 0/1`、`--persp 0/1` | 结构线 / 透视线开关 |
 | `--nofit` + `--dist` | 固定相机距离，便于做角度对比 |
 
-## 维护者备忘 / Maintainer notes
-
-- 推送代码：先跑 `show-key.cmd` 把公钥贴到 GitHub，再双击 `push-ssh.cmd`（SSH，不需浏览器登录）。
-- 不要提交 `bin/`、`obj/`、`dist/`、`*.keystore`；Release 二进制作为附件上传，不进仓库。
-
 ## 贡献 / Contributing
 
 欢迎 issue 与 PR。请保持两条约定：
