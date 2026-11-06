@@ -1,4 +1,4 @@
-# GeoViewer v2.0.0
+# GeoViewer v1.0.0
 
 ## 新增
 - **练习模式**：每个形体一张角度网格，A 343 / B 147 / C 49 三套方案可随时切换（记录互不影响）。
@@ -15,7 +15,7 @@
 - 轴测前端点线（消失点连线）在鱼眼下的弯曲与遮挡。
 
 ## 文件
-- `GeometryViewer.exe` — Windows 单文件自包含（约 66 MB，无需安装 .NET）
-- `GeometryViewer-Android.apk` — minSdk 24 / targetSdk 34（约 35 MB）
+- `GeoViewer.exe` — Windows 单文件自包含（约 66 MB，无需安装 .NET）
+- `GeoViewer-Android-1.0.0.apk` — minSdk 24 / targetSdk 34（约 35 MB）
 
 安卓端暂未移植透视类型与练习模式。

@@ -27,7 +27,7 @@ software renderer.
 | 平台 | 文件 | 说明 |
 |---|---|---|
 | Windows | `GeoViewer.exe` | 单文件自包含（约 66 MB），双击即用，无需安装 .NET |
-| Android | `GeometryViewer-Android.apk` | minSdk 24 / targetSdk 34，约 35 MB |
+| Android | `GeoViewer-Android-1.0.0.apk` | minSdk 24 / targetSdk 34，约 35 MB |
 
 > Windows 首次运行若被 SmartScreen 拦下：右键 exe → 属性 → 勾选「解除锁定」；或点「更多信息 → 仍要运行」。
 > 提示的成因与根治办法（代码签名 / Azure Trusted Signing / 应用商店）见 [SIGNING.md](SIGNING.md)。
@@ -80,7 +80,7 @@ docs/              截图
 ## 命令行 / CLI（离屏出图，便于自动化验证）
 
 ```
-GeometryViewer.exe --shot out.png --w 1200 --h 800 --ss 2 --solid cube --mode outline \
+GeoViewer.exe --shot out.png --w 1200 --h 800 --ss 2 --solid cube --mode outline \
                    --az -36 --el -3 --lens 2p --mm 85 --struct 1 --persp 1
 ```
 
