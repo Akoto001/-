@@ -1,4 +1,4 @@
-# GeoViewer · 几何体绘画参考 / Geometry Reference Viewer
+# GeoViewer · 几何参考 / Geometry Reference Viewer
 
 一个给**绘画练习**用的极简 3D 几何体观察工具，Windows + Android 双端，共用一套自研软件渲染器。
 A tiny 3D reference tool for **drawing practice** — five standard solids, a real camera model, and
@@ -26,7 +26,7 @@ software renderer.
 
 | 平台 | 文件 | 说明 |
 |---|---|---|
-| Windows | `GeometryViewer.exe` | 单文件自包含（约 66 MB），双击即用，无需安装 .NET |
+| Windows | `GeoViewer.exe` | 单文件自包含（约 66 MB），双击即用，无需安装 .NET |
 | Android | `GeometryViewer-Android.apk` | minSdk 24 / targetSdk 34，约 35 MB |
 
 > Windows 首次运行若被 SmartScreen 拦下：右键 exe → 属性 → 勾选「解除锁定」；或点「更多信息 → 仍要运行」。
