@@ -10,6 +10,12 @@ namespace GeoViewer.UI
     public partial class MainWindow : Window
     {
         private readonly Scene _scene = new Scene();
+        private readonly PracticeBook _practice = new PracticeBook();
+        private readonly Random _rng = new Random();
+        private readonly System.Collections.Generic.List<Border> _cells = new System.Collections.Generic.List<Border>();
+        private int _practiceRoll;
+        private int _litX = -1, _litY = -1, _litZ = -1;
+        private bool _bannerDismissed;
         private bool _sync;
 
         public MainWindow()
@@ -31,6 +37,9 @@ namespace GeoViewer.UI
             Viewport.Scene = _scene;
             TopView.Scene = _scene;
             Viewport.CameraChanged += OnCameraChanged;
+
+            BuildPracticeGrid();
+            Loaded += (s, e) => SyncPracticeUi();
 
             Loaded += OnWindowLoaded;
 
@@ -170,6 +179,7 @@ namespace GeoViewer.UI
             Viewport.RequestRender(true);
             TopView.Refresh();
             SyncAngleUi();
+            SyncPracticeUi();
             UpdateStatus();
         }
 
@@ -510,9 +520,239 @@ namespace GeoViewer.UI
             if (!int.TryParse(tag, out int i) || i < 0 || i >= Scene.Count) return;
             if (i == _scene.Selected) return;
             _scene.Select(i);
+            _litX = _litY = _litZ = -1;
+            _bannerDismissed = false;
             if (_sync) return;
             // no refit: the framing is shared by all five solids, so the size difference stays readable
             Refresh();
+        }
+
+        // ------------------------------------------------------------------ practice log
+
+        private static readonly int[] AxisAngles = PracticeBook.Angles;
+
+        /// <summary>Builds the 8×8 cell matrix once: first row/column are the angle labels.</summary>
+        private void BuildPracticeGrid()
+        {
+            _cells.Clear();
+            PracticeCells.Children.Clear();
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    var cell = new Border
+                    {
+                        Margin = new Thickness(2, 1, 2, 1),
+                        Height = 26,
+                        CornerRadius = new CornerRadius(4),
+                        BorderThickness = new Thickness(1),
+                        Background = Brushes.Transparent,
+                        BorderBrush = Brushes.Transparent,
+                        Child = new TextBlock
+                        {
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            FontSize = 11,
+                            Foreground = (Brush)FindResource("TextDim")
+                        }
+                    };
+
+                    if (row == 0 && col == 0)
+                    {
+                        // corner
+                    }
+                    else if (row == 0)
+                    {
+                        ((TextBlock)cell.Child).Text = AxisAngles[col - 1].ToString(CultureInfo.InvariantCulture);
+                        ((TextBlock)cell.Child).Foreground = (Brush)FindResource("TextFaint");
+                    }
+                    else if (col == 0)
+                    {
+                        ((TextBlock)cell.Child).Text = AxisAngles[row - 1].ToString(CultureInfo.InvariantCulture);
+                        ((TextBlock)cell.Child).Foreground = (Brush)FindResource("TextFaint");
+                    }
+                    else
+                    {
+                        cell.Tag = (row - 1) * 8 + (col - 1); // 0..48 → (xIndex, yIndex)
+                        cell.Cursor = System.Windows.Input.Cursors.Hand;
+                        cell.MouseLeftButtonDown += OnPracticeCellClick;
+                    }
+
+                    _cells.Add(cell);
+                    PracticeCells.Children.Add(cell);
+                }
+            }
+        }
+
+        private void OnPracticeCellClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (sender is not Border cell || cell.Tag is not int index) return;
+            int xi = index / 8;
+            int yi = index % 8;
+            int x = AxisAngles[xi];
+            int y = AxisAngles[yi];
+            int z = _practiceRoll;
+
+            _practice.Toggle(_scene.Selected, x, y, z);
+            if (x == _litX && y == _litY && z == _litZ) _litX = _litY = _litZ = -1;
+            _bannerDismissed = false;
+            SyncPracticeUi();
+        }
+
+        private void OnPracticeModeClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn || btn.Tag is not string tag) return;
+            if (!int.TryParse(tag, out int mode)) return;
+            _practice.SetMode((PracticeMode)mode);
+            if (!_practice.AllowsRoll(_practiceRoll)) _practiceRoll = 0;
+            _litX = _litY = _litZ = -1;
+            _bannerDismissed = false;
+            SyncPracticeUi();
+        }
+
+        private void OnPracticeRollClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Border chip || chip.Tag is not int value) return;
+            _practiceRoll = value;
+            SyncPracticeUi();
+        }
+
+        private void OnPracticeRandom(object sender, RoutedEventArgs e)
+        {
+            if (!_practice.TryPick(_scene.Selected, _rng, out int x, out int y, out int z))
+            {
+                SyncPracticeUi();
+                return;
+            }
+
+            _litX = x;
+            _litY = y;
+            _litZ = z;
+            _practiceRoll = z;
+            _bannerDismissed = false;
+
+            // jump the camera to the drawn angle, otherwise the user cannot see what to practise
+            _scene.ApplyAxisAngles(x, y, z);
+            Refresh(refit: true);
+        }
+
+        private void OnPracticeReset(object sender, RoutedEventArgs e)
+        {
+            MessageBoxResult answer = MessageBox.Show(this,
+                "清空当前形体的练习记录？其它形体不受影响。",
+                "重置练习记录", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+            if (answer != MessageBoxResult.OK) return;
+
+            _practice.ResetSolid(_scene.Selected);
+            _litX = _litY = _litZ = -1;
+            _bannerDismissed = false;
+            SyncPracticeUi();
+        }
+
+        private void OnPracticeDismiss(object sender, RoutedEventArgs e)
+        {
+            _bannerDismissed = true;
+            SyncPracticeUi();
+        }
+
+        private void SyncPracticeUi()
+        {
+            if (PracticeCells == null || _cells.Count == 0) return;
+
+            PracticeMode mode = _practice.Mode;
+            ModeDense.Content = (mode == PracticeMode.Dense ? "●" : "") + "A 343";
+            ModeMedium.Content = (mode == PracticeMode.Medium ? "●" : "") + "B 147";
+            ModeSimple.Content = (mode == PracticeMode.Simple ? "●" : "") + "C 49";
+
+            // roll chips for the current mode
+            PracticeRollRow.Children.Clear();
+            foreach (int roll in _practice.RollLevels)
+            {
+                bool on = roll == _practiceRoll;
+                var chip = new Border
+                {
+                    Margin = new Thickness(2, 0, 2, 0),
+                    Height = 24,
+                    CornerRadius = new CornerRadius(4),
+                    BorderThickness = new Thickness(on ? 2 : 1),
+                    Background = (Brush)FindResource(on ? "FieldBg" : "WindowBg"),
+                    BorderBrush = (Brush)FindResource(on ? "AccentBrush" : "PanelBorder"),
+                    Tag = roll,
+                    Cursor = System.Windows.Input.Cursors.Hand,
+                    Child = new TextBlock
+                    {
+                        Text = "Z " + roll,
+                        FontSize = 11,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Foreground = (Brush)FindResource(on ? "AccentBrush" : "TextDim")
+                    }
+                };
+                chip.MouseLeftButtonDown += (s, ev) => OnPracticeRollClick(s, ev);
+                PracticeRollRow.Children.Add(chip);
+            }
+
+            string[] names = { "球体", "圆柱体", "正方体", "长方体", "圆锥体" };
+            PracticeName.Text = names[Math.Clamp(_scene.Selected, 0, names.Length - 1)];
+
+            int done = _practice.DoneCount(_scene.Selected);
+            int total = _practice.Total;
+            PracticeCount.Text = "已画 " + done.ToString(CultureInfo.InvariantCulture) + " / "
+                + total.ToString(CultureInfo.InvariantCulture);
+            double trackWidth = ((FrameworkElement)PracticeBar.Parent).ActualWidth;
+            PracticeBar.Width = Math.Max(0, trackWidth) * (total == 0 ? 0 : (double)done / total);
+
+            Brush doneBg = new SolidColorBrush(Color.FromRgb(0x20, 0x4A, 0x56));
+            Brush litBg = new SolidColorBrush(Color.FromRgb(0x17, 0x30, 0x3A));
+            Brush emptyBg = (Brush)FindResource("FieldBg");
+            Brush accent = (Brush)FindResource("AccentBrush");
+            Brush border = (Brush)FindResource("PanelBorder");
+            Brush tick = new SolidColorBrush(Color.FromRgb(0xAA, 0xE2, 0xEC));
+
+            for (int row = 1; row < 8; row++)
+            {
+                for (int col = 1; col < 8; col++)
+                {
+                    Border cell = _cells[row * 8 + col];
+                    int x = AxisAngles[row - 1];
+                    int y = AxisAngles[col - 1];
+                    int z = _practiceRoll;
+                    bool isDone = _practice.IsDone(_scene.Selected, x, y, z);
+                    bool isLit = x == _litX && y == _litY && z == _litZ;
+                    TextBlock text = (TextBlock)cell.Child;
+
+                    if (isDone)
+                    {
+                        cell.Background = doneBg;
+                        cell.BorderBrush = accent;
+                        cell.BorderThickness = new Thickness(1);
+                        text.Text = "✓";
+                        text.FontSize = 14;
+                        text.Foreground = tick;
+                    }
+                    else if (isLit)
+                    {
+                        cell.Background = litBg;
+                        cell.BorderBrush = accent;
+                        cell.BorderThickness = new Thickness(2);
+                        text.Text = "◎";
+                        text.FontSize = 13;
+                        text.Foreground = accent;
+                    }
+                    else
+                    {
+                        cell.Background = emptyBg;
+                        cell.BorderBrush = border;
+                        cell.BorderThickness = new Thickness(1);
+                        text.Text = string.Empty;
+                    }
+                }
+            }
+
+            bool finished = done >= total && total > 0;
+            PracticeBanner.Visibility = finished && !_bannerDismissed ? Visibility.Visible : Visibility.Collapsed;
+            PracticeRandom.IsEnabled = !finished;
+            PracticeRandom.Opacity = finished ? 0.45 : 1.0;
         }
     }
 }
